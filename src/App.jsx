@@ -15,11 +15,11 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit, Loader2
 } from 'lucide-react';
 
-// --- 🔑 GEMINI API KEY (PASTE YOUR KEY HERE) ---
-const GEMINI_API_KEY = "AIzaSyBDEgYD7UmhwnMhiSoSOc6dMdZ6h5L2pno"; 
+// --- 🔑 YOUR GEMINI API KEY ---
+const GEMINI_API_KEY = "AIzaSyBDEgYD7UmhwnMhiSoSOc6dMdZ6h5L2pno";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -49,7 +49,6 @@ const compressImage = (file) => new Promise((resolve, reject) => {
 // --- GEMINI FUNCTION ---
 const askGemini = async (prompt) => {
   try {
-    if(GEMINI_API_KEY.includes("මෙතැනට")) return "කරුණාකර කේතයේ (Code) API Key එක ඇතුළත් කරන්න.";
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro"});
     const result = await model.generateContent(prompt);
@@ -57,7 +56,7 @@ const askGemini = async (prompt) => {
     return response.text();
   } catch (error) {
     console.error(error);
-    return "දෝෂයක් ඇතිවිය. කරුණාකර නැවත උත්සාහ කරන්න.";
+    return "දෝෂයක් ඇතිවිය. කරුණාකර පසුව උත්සාහ කරන්න.";
   }
 };
 
@@ -83,7 +82,7 @@ const AuthScreen = () => {
         <div className="text-center mb-8"><div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border-4 border-white"><Sprout className="w-12 h-12 text-green-600"/></div><h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2><p className="text-sm text-gray-500">Smart Tea Estate Manager</p></div>
         {error && <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium flex items-center justify-center gap-2"><AlertCircle size={16}/>{error}</div>}
         <form onSubmit={handleLogin} className="space-y-5">
-          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="kandauda" autoFocus /></div></div>
+          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම (Eg: kandauda)</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="kandauda" autoFocus /></div></div>
           <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">මුරපදය (PIN)</label><div className="relative"><KeyRound className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="password" inputMode="numeric" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-bold tracking-widest text-lg" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••" /></div></div>
           <button disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-green-600/30 text-lg mt-2">{loading ? "සකසමින්..." : "ඇතුල් වන්න"}</button>
         </form>
@@ -186,7 +185,6 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
   const stats = recs.reduce((acc, r) => ({ ...acc, h: acc.h+r.harvest, e: acc.e+r.expenses, i: acc.i+(r.hasPrice?r.income:0), p: acc.p+(r.hasPrice?0:r.harvest) }), {h:0,e:0,i:0,p:0});
   const due = reminders.filter(r => r.status==='pending' && new Date(r.date) <= new Date());
 
-  // Yearly Stats Logic
   const yearlyData = useMemo(() => {
     const data = [];
     for(let i=11; i>=0; i--) {
@@ -216,7 +214,6 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
       <div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>
       
-      {/* Gemini Section */}
       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-bold text-purple-800 flex items-center gap-2"><Sparkles size={18}/> Gemini විශ්ලේෂණය</h3>
@@ -225,14 +222,9 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
         {aiRes && <div className="text-sm text-purple-900 bg-white p-3 rounded-lg shadow-sm whitespace-pre-line leading-relaxed">{aiRes}</div>}
       </div>
 
-      {/* Yearly Chart */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <h3 className="font-bold text-gray-600 mb-4">පසුගිය මාස 12 කාර්ය සාධනය</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={yearlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" fontSize={10}/><YAxis fontSize={10}/><Tooltip /><Legend /><Line type="monotone" dataKey="Harvest" stroke="#10B981" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="Profit" stroke="#3B82F6" strokeWidth={2} dot={false} /></LineChart>
-          </ResponsiveContainer>
-        </div>
+        <div className="h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={yearlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" fontSize={10}/><YAxis fontSize={10}/><Tooltip /><Legend /><Line type="monotone" dataKey="Harvest" stroke="#10B981" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="Profit" stroke="#3B82F6" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div>
       </div>
     </div>
   );
@@ -248,8 +240,6 @@ const EntryForm = ({factories, plots, onSubmit}) => {
 const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [editRec, sEditRec] = useState(null);
   const recs = records.filter(r => r.monthId===m);
-
-  // EXPORT FUNCTION
   const downloadCSV = () => {
     if(!recs.length) return alert("දත්ත නොමැත");
     const headers = ["Date", "Plot", "Factory", "Harvest(kg)", "Expenses", "Income", "Profit", "Notes"];
@@ -258,36 +248,12 @@ const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
     link.download = `Tea_Records_${m}.csv`; document.body.appendChild(link); link.click();
   };
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center bg-white p-3 rounded shadow">
-        <div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div>
-        <button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> CSV</button>
-      </div>
+      <div className="flex justify-between items-center bg-white p-3 rounded shadow"><div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div><button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> CSV</button></div>
       {recs.length===0 ? <div className="text-center py-10 text-gray-400">දත්ත නැත</div> : <div className="bg-white rounded shadow overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-xs uppercase"><tr><th className="p-3">දිනය</th><th className="p-3">අස්වැන්න</th><th className="p-3">ආදායම</th><th className="p-3 text-center">ක්‍රියා</th></tr></thead><tbody>{recs.map(r=><tr key={r.id} className="border-t"><td className="p-3 font-bold">{formatDate(r.date)}<div className="text-xs font-normal text-gray-500">{r.plotName}</div></td><td className="p-3 text-green-700 font-bold">{r.harvest} kg</td><td className="p-3">{r.hasPrice?formatLKR(r.income):<span className="text-xs bg-yellow-200 px-1 rounded">Pending</span>}</td><td className="p-3 flex justify-center gap-3"><button onClick={()=>sEditRec(r)} className="text-blue-500"><Pencil size={16}/></button><button onClick={()=>onDelete(r.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>}
       {editRec && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="font-bold text-lg mb-4">සංස්කරණය (Edit)</h3>
-            <form onSubmit={(e)=>{e.preventDefault(); onUpdate(editRec); sEditRec(null)}} className="space-y-3">
-              <div><label className="text-xs">දිනය</label><input type="date" value={editRec.date} onChange={e=>sEditRec({...editRec, date:e.target.value})} className="w-full border p-2 rounded"/></div>
-              <div><label className="text-xs">ඉඩම</label><select value={editRec.plotId} onChange={e=>sEditRec({...editRec, plotId:e.target.value})} className="w-full border p-2 rounded">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-              <div><label className="text-xs">දළු ප්‍රමාණය (KG)</label><input type="number" step="0.1" value={editRec.harvestAmount} onChange={e=>sEditRec({...editRec, harvestAmount:Number(e.target.value)})} className="w-full border p-2 rounded bg-green-50 font-bold"/></div>
-              <div><label className="text-xs">කම්කරු ගණන</label><input type="number" value={editRec.workerCount} onChange={e=>sEditRec({...editRec, workerCount:Number(e.target.value)})} className="w-full border p-2 rounded"/></div>
-              <div className="grid grid-cols-3 gap-2">
-                 <div><label className="text-[10px]">පඩි</label><input type="number" value={editRec.laborCost} onChange={e=>sEditRec({...editRec, laborCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-                 <div><label className="text-[10px]">ප්‍රවාහන</label><input type="number" value={editRec.transportCost} onChange={e=>sEditRec({...editRec, transportCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-                 <div><label className="text-[10px]">වෙනත්</label><input type="number" value={editRec.otherCost} onChange={e=>sEditRec({...editRec, otherCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-              </div>
-              <div><label className="text-xs">සටහන් (Notes)</label><textarea value={editRec.notes} onChange={e=>sEditRec({...editRec, notes:e.target.value})} className="w-full p-2 border rounded h-16"/></div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={()=>sEditRec(null)} className="flex-1 bg-gray-200 py-2 rounded font-bold text-gray-700">අවලංගු කරන්න</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded font-bold">සුරකින්න</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"><h3 className="font-bold text-lg mb-4">සංස්කරණය (Edit)</h3><form onSubmit={(e)=>{e.preventDefault(); onUpdate(editRec); sEditRec(null)}} className="space-y-3"><div><label className="text-xs">දිනය</label><input type="date" value={editRec.date} onChange={e=>sEditRec({...editRec, date:e.target.value})} className="w-full border p-2 rounded"/></div><div><label className="text-xs">ඉඩම</label><select value={editRec.plotId} onChange={e=>sEditRec({...editRec, plotId:e.target.value})} className="w-full border p-2 rounded">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div><label className="text-xs">දළු ප්‍රමාණය (KG)</label><input type="number" step="0.1" value={editRec.harvestAmount} onChange={e=>sEditRec({...editRec, harvestAmount:Number(e.target.value)})} className="w-full border p-2 rounded bg-green-50 font-bold"/></div><div><label className="text-xs">කම්කරු ගණන</label><input type="number" value={editRec.workerCount} onChange={e=>sEditRec({...editRec, workerCount:Number(e.target.value)})} className="w-full border p-2 rounded"/></div><div className="grid grid-cols-3 gap-2"><div><label className="text-[10px]">පඩි</label><input type="number" value={editRec.laborCost} onChange={e=>sEditRec({...editRec, laborCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div><div><label className="text-[10px]">ප්‍රවාහන</label><input type="number" value={editRec.transportCost} onChange={e=>sEditRec({...editRec, transportCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div><div><label className="text-[10px]">වෙනත්</label><input type="number" value={editRec.otherCost} onChange={e=>sEditRec({...editRec, otherCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div></div><div><label className="text-xs">සටහන් (Notes)</label><textarea value={editRec.notes} onChange={e=>sEditRec({...editRec, notes:e.target.value})} className="w-full p-2 border rounded h-16"/></div><div className="flex gap-2 pt-2"><button type="button" onClick={()=>sEditRec(null)} className="flex-1 bg-gray-200 py-2 rounded font-bold text-gray-700">අවලංගු කරන්න</button><button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded font-bold">සුරකින්න</button></div></form></div></div>
       )}
     </div>
   );
