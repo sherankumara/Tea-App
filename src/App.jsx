@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { 
   getAuth, 
   signInWithEmailAndPassword,
@@ -11,11 +12,14 @@ import {
   getFirestore, collection, addDoc, deleteDoc, getDoc, doc, onSnapshot, query, orderBy, serverTimestamp, updateDoc, setDoc
 } from 'firebase/firestore';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit
 } from 'lucide-react';
+
+// --- 🔑 GEMINI API KEY (PASTE YOUR KEY HERE) ---
+const GEMINI_API_KEY = "AIzaSyBDEgYD7UmhwnMhiSoSOc6dMdZ6h5L2pno"; 
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -42,6 +46,21 @@ const compressImage = (file) => new Promise((resolve, reject) => {
   reader.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => { const cvs = document.createElement('canvas'), ctx = cvs.getContext('2d'); let w = img.width, h = img.height, m = 800; if(w>h){if(w>m){h*=m/w;w=m}}else{if(h>m){w*=m/h;h=m}}; cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h); resolve(cvs.toDataURL('image/jpeg',0.5)); }; };
 });
 
+// --- GEMINI FUNCTION ---
+const askGemini = async (prompt) => {
+  try {
+    if(GEMINI_API_KEY.includes("මෙතැනට")) return "කරුණාකර කේතයේ (Code) API Key එක ඇතුළත් කරන්න.";
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error(error);
+    return "දෝෂයක් ඇතිවිය. කරුණාකර නැවත උත්සාහ කරන්න.";
+  }
+};
+
 // --- AUTH SCREEN ---
 const AuthScreen = () => {
   const [username, setUsername] = useState('');
@@ -64,7 +83,7 @@ const AuthScreen = () => {
         <div className="text-center mb-8"><div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border-4 border-white"><Sprout className="w-12 h-12 text-green-600"/></div><h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2><p className="text-sm text-gray-500">Smart Tea Estate Manager</p></div>
         {error && <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium flex items-center justify-center gap-2"><AlertCircle size={16}/>{error}</div>}
         <form onSubmit={handleLogin} className="space-y-5">
-          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම (Eg: kandauda)</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="kandauda" autoFocus /></div></div>
+          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="kandauda" autoFocus /></div></div>
           <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">මුරපදය (PIN)</label><div className="relative"><KeyRound className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="password" inputMode="numeric" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-bold tracking-widest text-lg" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••" /></div></div>
           <button disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-green-600/30 text-lg mt-2">{loading ? "සකසමින්..." : "ඇතුල් වන්න"}</button>
         </form>
@@ -114,7 +133,7 @@ export default function App() {
   const handleSetupPin = async (p) => { if(p.length<4)return alert("අංක 4ක් අවශ්‍යයි"); await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {adminPin:p}); setSavedAdminPin(p); setAuthStatus('admin_view'); };
   const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAdminPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
   const addRec = async (d) => { await addDoc(collection(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`), {...d, createdAt: serverTimestamp()}); alert("සාර්ථකයි!"); };
-  const upRec = async (d) => { const {id,...rest}=d; const p=plots.find(x=>x.id===d.plotId); const f=factories.find(x=>x.id===d.factoryId); await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, plotName:p?.name, factoryName:f?.name, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
+  const upRec = async (d) => { const {id,...rest}=d; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
   const delRec = async (id) => { if(confirm("මකා දමන්නද?")) await deleteDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id)); };
   const setPrice = async (m, p) => { await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/monthly_prices`, m), {...p, updatedAt: serverTimestamp()}, {merge:true}); alert("මිල යාවත්කාලීනයි"); };
   
@@ -158,13 +177,67 @@ const PinScreen = ({title, message, onSubmit, buttonText, icon:Icon, onAdmin, sh
   const [p, sP] = useState('');
   return <div className="min-h-screen bg-green-900 flex items-center justify-center p-4"><div className="bg-white p-8 rounded-2xl w-full max-w-md text-center"><div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Icon className="w-10 h-10 text-green-600"/></div><h2 className="text-2xl font-bold mb-2">{title}</h2><p className="text-gray-500 mb-6">{message}</p><form onSubmit={e=>{e.preventDefault(); onSubmit(p); sP('')}}><input type="password" inputMode="numeric" maxLength="6" className="w-full text-center text-3xl font-bold p-4 border-2 rounded-xl mb-6" value={p} onChange={e=>sP(e.target.value)} autoFocus/><button className="w-full bg-green-700 text-white font-bold py-4 rounded-xl mb-4">{buttonText}</button></form>{showAdminBtn && <button onClick={onAdmin} className="text-blue-600 text-sm font-bold">Admin පිවිසුම</button>}</div></div>;
 };
+
 const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [p, sP] = useState('all');
+  const [aiRes, sAiRes] = useState(null); const [aiLoad, sAiLoad] = useState(false);
+
   const recs = records.filter(r => r.monthId===m && (p==='all' || r.plotId===p));
   const stats = recs.reduce((acc, r) => ({ ...acc, h: acc.h+r.harvest, e: acc.e+r.expenses, i: acc.i+(r.hasPrice?r.income:0), p: acc.p+(r.hasPrice?0:r.harvest) }), {h:0,e:0,i:0,p:0});
   const due = reminders.filter(r => r.status==='pending' && new Date(r.date) <= new Date());
-  return <div className="space-y-6">{due.length>0 && <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500"><div className="flex items-center gap-3 mb-2"><BellRing className="text-blue-600"/><h3 className="font-bold text-blue-800">මතක් කිරීම්!</h3></div>{due.map(d=><div key={d.id} className="flex justify-between items-center bg-white p-2 rounded mt-1 text-sm shadow-sm"><p><strong>{formatDate(d.date)}</strong> පොහොර යෙදීම.</p><button onClick={()=>onUpdateReminder(d.id,'completed')} className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">හරි</button></div>)}</div>}<div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>{stats.p>0 && <div className="bg-yellow-50 p-2 rounded text-yellow-700 text-sm">මිල නොදැමූ දළු: {stats.p} kg</div>}</div>;
+
+  // Yearly Stats Logic
+  const yearlyData = useMemo(() => {
+    const data = [];
+    for(let i=11; i>=0; i--) {
+      const d = new Date(); d.setMonth(d.getMonth()-i);
+      const mid = d.toISOString().slice(0,7);
+      const mRecs = records.filter(r => r.monthId === mid);
+      const h = mRecs.reduce((s,r)=>s+r.harvest,0);
+      const pr = mRecs.reduce((s,r)=>s+r.profit,0);
+      data.push({name: getMonthName(mid).split(' ')[0], Harvest:h, Profit:pr});
+    }
+    return data;
+  }, [records]);
+
+  const handleAI = async () => {
+    sAiLoad(true); sAiRes(null);
+    const prompt = `You are an expert tea estate consultant. Analyze this data for ${getMonthName(m)} in Sinhala language.
+    Harvest: ${stats.h}kg, Income: ${formatLKR(stats.i)}, Expenses: ${formatLKR(stats.e)}, Profit: ${formatLKR(stats.i-stats.e)}.
+    Provide 3 bullet points of advice in Sinhala on how to improve profit and reduce cost based on these numbers. Keep it encouraging.`;
+    const text = await askGemini(prompt);
+    sAiRes(text); sAiLoad(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      {due.length>0 && <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500"><div className="flex items-center gap-3 mb-2"><BellRing className="text-blue-600"/><h3 className="font-bold text-blue-800">මතක් කිරීම්!</h3></div>{due.map(d=><div key={d.id} className="flex justify-between items-center bg-white p-2 rounded mt-1 text-sm shadow-sm"><p><strong>{formatDate(d.date)}</strong> පොහොර යෙදීම.</p><button onClick={()=>onUpdateReminder(d.id,'completed')} className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">හරි</button></div>)}</div>}
+      
+      <div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>
+      
+      {/* Gemini Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-purple-800 flex items-center gap-2"><Sparkles size={18}/> Gemini විශ්ලේෂණය</h3>
+          <button onClick={handleAI} disabled={aiLoad} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 disabled:opacity-50">{aiLoad?<Loader2 className="animate-spin" size={14}/>:<BrainCircuit size={14}/>} විමසන්න</button>
+        </div>
+        {aiRes && <div className="text-sm text-purple-900 bg-white p-3 rounded-lg shadow-sm whitespace-pre-line leading-relaxed">{aiRes}</div>}
+      </div>
+
+      {/* Yearly Chart */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <h3 className="font-bold text-gray-600 mb-4">පසුගිය මාස 12 කාර්ය සාධනය</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={yearlyData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" fontSize={10}/><YAxis fontSize={10}/><Tooltip /><Legend /><Line type="monotone" dataKey="Harvest" stroke="#10B981" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="Profit" stroke="#3B82F6" strokeWidth={2} dot={false} /></LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
 };
+
 const EntryForm = ({factories, plots, onSubmit}) => {
   const [d, sD] = useState({date:new Date().toISOString().split('T')[0], plotId:'', factoryId:'', harvestAmount:'', workerCount:'', laborCost:'', transportCost:'', otherCost:'', notes:'', image:null});
   useEffect(()=>{if(plots.length && !d.plotId)sD(p=>({...p,plotId:plots[0].id})); if(factories.length && !d.factoryId)sD(p=>({...p,factoryId:factories[0].id}))},[plots,factories]);
@@ -172,7 +245,6 @@ const EntryForm = ({factories, plots, onSubmit}) => {
   return <div className="bg-white p-6 rounded-xl shadow-sm max-w-2xl mx-auto"><h2 className="font-bold text-lg mb-4">නව දත්ත</h2><form onSubmit={sub} className="space-y-4"><div className="grid grid-cols-2 gap-4"><input type="date" value={d.date} onChange={e=>sD({...d,date:e.target.value})} className="border p-2 rounded w-full"/><select value={d.plotId} onChange={e=>sD({...d,plotId:e.target.value})} className="border p-2 rounded w-full">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div className="grid grid-cols-2 gap-4"><input type="number" step="0.1" placeholder="දළු KG" value={d.harvestAmount} onChange={e=>sD({...d,harvestAmount:e.target.value})} className="border p-2 rounded bg-green-50 font-bold"/><input type="number" placeholder="කම්කරු ගණන" value={d.workerCount} onChange={e=>sD({...d,workerCount:e.target.value})} className="border p-2 rounded"/></div>{Number(d.harvestAmount)>0 && <select value={d.factoryId} onChange={e=>sD({...d,factoryId:e.target.value})} className="border p-2 rounded w-full">{factories.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>}<div className="bg-red-50 p-3 rounded"><p className="text-xs font-bold mb-2">වියදම්</p><div className="grid grid-cols-3 gap-2"><input type="number" placeholder="පඩි" value={d.laborCost} onChange={e=>sD({...d,laborCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="ප්‍රවාහන" value={d.transportCost} onChange={e=>sD({...d,transportCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="වෙනත්" value={d.otherCost} onChange={e=>sD({...d,otherCost:e.target.value})} className="border p-1 rounded text-sm"/></div></div><div className="border p-2 rounded"><p className="text-xs text-gray-500 mb-1">වෙනත් සටහන් (Sinhala/English/123..)</p><textarea value={d.notes} onChange={e=>sD({...d,notes:e.target.value})} className="w-full p-2 border rounded h-20 text-sm" placeholder="උදා: වැස්ස නිසා වැඩ නතර කලා (2 PM)"></textarea></div><div className="border p-2 rounded"><p className="text-xs text-gray-500 mb-1">ඡායාරූපය</p><input type="file" accept="image/*" onChange={async(e)=>{if(e.target.files[0])sD({...d,image:await compressImage(e.target.files[0])})}}/></div><button className="w-full bg-green-700 text-white py-3 rounded-lg font-bold">සුරකින්න</button></form></div>;
 };
 
-// --- HISTORY VIEW ---
 const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [editRec, sEditRec] = useState(null);
   const recs = records.filter(r => r.monthId===m);
@@ -193,10 +265,7 @@ const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
         <div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div>
         <button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> CSV</button>
       </div>
-      
       {recs.length===0 ? <div className="text-center py-10 text-gray-400">දත්ත නැත</div> : <div className="bg-white rounded shadow overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-xs uppercase"><tr><th className="p-3">දිනය</th><th className="p-3">අස්වැන්න</th><th className="p-3">ආදායම</th><th className="p-3 text-center">ක්‍රියා</th></tr></thead><tbody>{recs.map(r=><tr key={r.id} className="border-t"><td className="p-3 font-bold">{formatDate(r.date)}<div className="text-xs font-normal text-gray-500">{r.plotName}</div></td><td className="p-3 text-green-700 font-bold">{r.harvest} kg</td><td className="p-3">{r.hasPrice?formatLKR(r.income):<span className="text-xs bg-yellow-200 px-1 rounded">Pending</span>}</td><td className="p-3 flex justify-center gap-3"><button onClick={()=>sEditRec(r)} className="text-blue-500"><Pencil size={16}/></button><button onClick={()=>onDelete(r.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>}
-      
-      {/* EDIT MODAL */}
       {editRec && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
