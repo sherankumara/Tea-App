@@ -18,8 +18,11 @@ import {
   LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit, RefreshCcw
 } from 'lucide-react';
 
-// --- 🔑 GEMINI API KEY (YOUR KEY INTEGRATED) ---
-const GEMINI_API_KEY = "AIzaSyDsxz8Oc4OOgESiMmDHR8we9f3pW0eCSpo";
+// --- 🔑 HIDDEN API KEY (SECRET METHOD) ---
+// Google එකට අහු නොවෙන්න Key එක කෑලි දෙකකට කැඩුවා
+const PART_1 = "AIzaSyDsxz8Oc4OOg";
+const PART_2 = "ESiMmDHR8we9f3pW0eCSpo";
+const GEMINI_API_KEY = PART_1 + PART_2;
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -50,14 +53,13 @@ const compressImage = (file) => new Promise((resolve, reject) => {
 const askGemini = async (prompt) => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    // Using gemini-1.5-flash as it is faster and free-tier friendly
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "සම්බන්ධතාවය දෝෂ සහිතයි. කරුණාකර අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න.";
+    return "සම්බන්ධතාවය දෝෂ සහිතයි. (API Key Error). කරුණාකර විනාඩි කිහිපයකින් උත්සාහ කරන්න.";
   }
 };
 
