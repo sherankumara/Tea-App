@@ -15,11 +15,11 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, BrainCircuit, RefreshCcw
 } from 'lucide-react';
 
-// --- 🔑 GEMINI API KEY (UPDATED) ---
-const GEMINI_API_KEY = "AIzaSyAR1Vs6qV_fV_ubGy7EVfyXMXpF6aW58ME"; 
+// --- 🔑 GEMINI API KEY (YOUR KEY INTEGRATED) ---
+const GEMINI_API_KEY = "AIzaSyDsxz8Oc4OOgESiMmDHR8we9f3pW0eCSpo";
 
 // --- Firebase Config ---
 const firebaseConfig = {
@@ -50,13 +50,14 @@ const compressImage = (file) => new Promise((resolve, reject) => {
 const askGemini = async (prompt) => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+    // Using gemini-1.5-flash as it is faster and free-tier friendly
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "තාක්ෂණික දෝෂයක් ඇතිවිය. කරුණාකර මඳ වේලාවකින් උත්සාහ කරන්න.";
+    return "සම්බන්ධතාවය දෝෂ සහිතයි. කරුණාකර අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න.";
   }
 };
 
@@ -244,7 +245,6 @@ const EntryForm = ({factories, plots, onSubmit}) => {
   return <div className="bg-white p-6 rounded-xl shadow-sm max-w-2xl mx-auto"><h2 className="font-bold text-lg mb-4">නව දත්ත</h2><form onSubmit={sub} className="space-y-4"><div className="grid grid-cols-2 gap-4"><input type="date" value={d.date} onChange={e=>sD({...d,date:e.target.value})} className="border p-2 rounded w-full"/><select value={d.plotId} onChange={e=>sD({...d,plotId:e.target.value})} className="border p-2 rounded w-full">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div className="grid grid-cols-2 gap-4"><input type="number" step="0.1" placeholder="දළු KG" value={d.harvestAmount} onChange={e=>sD({...d,harvestAmount:e.target.value})} className="border p-2 rounded bg-green-50 font-bold"/><input type="number" placeholder="කම්කරු ගණන" value={d.workerCount} onChange={e=>sD({...d,workerCount:e.target.value})} className="border p-2 rounded"/></div>{Number(d.harvestAmount)>0 && <select value={d.factoryId} onChange={e=>sD({...d,factoryId:e.target.value})} className="border p-2 rounded w-full">{factories.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>}<div className="bg-red-50 p-3 rounded"><p className="text-xs font-bold mb-2">වියදම්</p><div className="grid grid-cols-3 gap-2"><input type="number" placeholder="පඩි" value={d.laborCost} onChange={e=>sD({...d,laborCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="ප්‍රවාහන" value={d.transportCost} onChange={e=>sD({...d,transportCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="වෙනත්" value={d.otherCost} onChange={e=>sD({...d,otherCost:e.target.value})} className="border p-1 rounded text-sm"/></div></div><div className="border p-2 rounded"><p className="text-xs text-gray-500 mb-1">වෙනත් සටහන් (Sinhala/English/123..)</p><textarea value={d.notes} onChange={e=>sD({...d,notes:e.target.value})} className="w-full p-2 border rounded h-20 text-sm" placeholder="උදා: වැස්ස නිසා වැඩ නතර කලා (2 PM)"></textarea></div><div className="border p-2 rounded"><p className="text-xs text-gray-500 mb-1">ඡායාරූපය</p><input type="file" accept="image/*" onChange={async(e)=>{if(e.target.files[0])sD({...d,image:await compressImage(e.target.files[0])})}}/></div><button className="w-full bg-green-700 text-white py-3 rounded-lg font-bold">සුරකින්න</button></form></div>;
 };
 
-// --- HISTORY VIEW ---
 const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [editRec, sEditRec] = useState(null);
   const recs = records.filter(r => r.monthId===m);
