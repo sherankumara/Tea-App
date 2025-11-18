@@ -14,10 +14,10 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, Sparkles, Loader2, MapPin, Pencil, Save, Camera, KeyRound
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, Sparkles, Loader2, MapPin, Pencil, Save, Camera, KeyRound, RefreshCcw
 } from 'lucide-react';
 
-// --- Firebase Config (YOUR KEY) ---
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBrtv7D89sDboUrEkBEbXazJQlmjGF7C4g",
   authDomain: "my-teaapp.firebaseapp.com",
@@ -51,19 +51,10 @@ const AuthScreen = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
-    
-    // SMART LOGIC: If no '@' is typed, add the dummy domain automatically
     let finalEmail = username.trim().toLowerCase();
-    if (!finalEmail.includes('@')) {
-      finalEmail = finalEmail + "@teamanager.com";
-    }
-
-    try {
-      await signInWithEmailAndPassword(auth, finalEmail, password);
-    } catch (err) {
-      console.error(err);
-      setError("නම හෝ මුරපදය වැරදියි. නැවත උත්සාහ කරන්න.");
-    }
+    if (!finalEmail.includes('@')) { finalEmail = finalEmail + "@teamanager.com"; }
+    try { await signInWithEmailAndPassword(auth, finalEmail, password); } 
+    catch (err) { console.error(err); setError("නම හෝ මුරපදය වැරදියි."); }
     setLoading(false);
   };
 
@@ -75,32 +66,11 @@ const AuthScreen = () => {
           <h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2>
           <p className="text-sm text-gray-500">Smart Tea Estate Manager</p>
         </div>
-        
         {error && <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium flex items-center justify-center gap-2"><AlertCircle size={16}/>{error}</div>}
-        
         <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම (Estate Name)</label>
-            <div className="relative">
-              <Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/>
-              <input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" 
-                value={username} onChange={e=>setUsername(e.target.value)} placeholder="උදා: kandauda" autoFocus />
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1 ml-1">ඔබේ වත්තේ කෙටි නම පමණක් ඇතුළත් කරන්න.</p>
-          </div>
-          
-          <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">මුරපදය (PIN)</label>
-            <div className="relative">
-              <KeyRound className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/>
-              <input type="password" inputMode="numeric" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-bold tracking-widest text-lg" 
-                value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••" />
-            </div>
-          </div>
-          
-          <button disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-green-600/30 text-lg mt-2">
-            {loading ? "සකසමින්..." : "ඇතුල් වන්න"}
-          </button>
+          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම (Estate Name)</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="උදා: kandauda" autoFocus /></div></div>
+          <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">මුරපදය (PIN)</label><div className="relative"><KeyRound className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="password" inputMode="numeric" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-bold tracking-widest text-lg" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••" /></div></div>
+          <button disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-green-600/30 text-lg mt-2">{loading ? "සකසමින්..." : "ඇතුල් වන්න"}</button>
         </form>
       </div>
     </div>
@@ -129,7 +99,6 @@ export default function App() {
         if (pinDoc.exists() && pinDoc.data().adminPin) {
           setSavedAdminPin(pinDoc.data().adminPin); setSavedAppPin(pinDoc.data().appPin); setAuthStatus('login_app_pin');
         } else { setAuthStatus('setup_admin_pin'); }
-        
         const unsub1 = onSnapshot(query(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/tea_records`), orderBy('date', 'desc')), s => setRecords(s.docs.map(d => ({id:d.id, ...d.data()}))));
         const unsub2 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/monthly_prices`), s => { const p={}; s.docs.forEach(d=>p[d.id]=d.data()); setPrices(p); });
         const unsub3 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/factories`), s => setFactories(s.docs.map(d => ({id:d.id, ...d.data()}))));
@@ -146,7 +115,7 @@ export default function App() {
   const processedRecords = useMemo(() => records.map(rec => { const mId = rec.date.substring(0,7); const price = (rec.factoryId && prices[mId]?.[rec.factoryId]) || 0; const exp = (rec.laborCost||0)+(rec.transportCost||0)+(rec.otherCost||0); return { ...rec, monthId: mId, price, hasPrice: price>0, income: (rec.harvestAmount||0)*price, expenses: exp, profit: ((rec.harvestAmount||0)*price)-exp }; }), [records, prices]);
 
   const handleSetupPin = async (p) => { if(p.length<4)return alert("අංක 4ක් අවශ්‍යයි"); await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {adminPin:p}); setSavedAdminPin(p); setAuthStatus('admin_view'); };
-  const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAdminPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
+  const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAppPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
   const addRec = async (d) => { await addDoc(collection(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`), {...d, createdAt: serverTimestamp()}); alert("සාර්ථකයි!"); };
   const upRec = async (d) => { const {id,...rest}=d; const p=plots.find(x=>x.id===d.plotId); const f=factories.find(x=>x.id===d.factoryId); await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, plotName:p?.name, factoryName:f?.name, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
   const delRec = async (id) => { if(confirm("මකා දමන්නද?")) await deleteDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id)); };
@@ -215,12 +184,33 @@ const PriceManager = ({prices, factories, onSave}) => {
   useEffect(()=>sInp(prices[m]||{}),[m,prices]);
   return <div className="bg-white p-6 rounded max-w-md mx-auto"><h2 className="font-bold mb-4">මිල ගණන්</h2><input type="month" value={m} onChange={e=>sM(e.target.value)} className="w-full border p-2 rounded mb-4"/><div className="space-y-2">{factories.map(f=><div key={f.id} className="flex justify-between items-center"><span>{f.name}</span><input type="number" value={inp[f.id]||''} onChange={e=>sInp({...inp,[f.id]:e.target.value})} placeholder="Rs." className="border p-2 rounded w-24 text-right"/></div>)}</div><button onClick={()=>onSave(m,inp)} className="w-full bg-yellow-500 text-white font-bold py-2 rounded mt-4">සුරකින්න</button></div>;
 };
+
 const SettingsManager = ({factories, plots, onAddFac, onDelFac, onAddPlot, onDelPlot, onChangePin, savedAdminPin, savedAppPin, reminders, onAddRem, onDelRem, onUpRem}) => {
   const [nf, sNf] = useState(''); const [np, sNp] = useState(''); const [rd, sRd] = useState('');
-  const [pass, sPass] = useState({old:'', new:'', con:''});
-  const changeP = async(type) => { if(pass.new!==pass.con || pass.new.length<4)return alert("මුරපදය ගැටළුවක්"); if(await onChangePin(type, pass.old, pass.new)){alert("හරි"); sPass({old:'',new:'',con:''})}else{alert("පරණ මුරපදය වැරදියි")} };
-  return <div className="max-w-2xl mx-auto space-y-6"><div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">ඉඩම්</h3><div className="flex gap-2 mb-2"><input value={np} onChange={e=>sNp(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddPlot(np);sNp('')}} className="bg-blue-600 text-white px-4 rounded">Add</button></div>{plots.map(p=><div key={p.id} className="flex justify-between p-2 border-b"><span>{p.name}</span><button onClick={()=>onDelPlot(p.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div><div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">කර්මාන්ත ශාලා</h3><div className="flex gap-2 mb-2"><input value={nf} onChange={e=>sNf(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddFac(nf);sNf('')}} className="bg-green-600 text-white px-4 rounded">Add</button></div>{factories.map(f=><div key={f.id} className="flex justify-between p-2 border-b"><span>{f.name}</span><button onClick={()=>onDelFac(f.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div><div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">මතක් කිරීම්</h3><div className="flex gap-2 mb-2"><input type="date" value={rd} onChange={e=>sRd(e.target.value)} className="border p-2 flex-1 rounded"/><button onClick={()=>{onAddRem(rd);sRd('')}} className="bg-purple-600 text-white px-4 rounded">Add</button></div>{reminders.map(r=><div key={r.id} className="flex justify-between p-2 border-b"><span>{formatDate(r.date)}</span><div className="flex gap-2">{r.status!=='completed'&&<button onClick={()=>onUpRem(r.id,'completed')} className="text-green-500"><Check size={16}/></button>}<button onClick={()=>onDelRem(r.id)} className="text-red-500"><X size={16}/></button></div></div>)}</div><div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">Admin මුරපදය වෙනස් කිරීම</h3><div className="space-y-2"><input type="password" placeholder="පරණ එක" className="border p-2 w-full rounded" value={pass.old} onChange={e=>sPass({...pass,old:e.target.value})}/><input type="password" placeholder="අලුත් එක" className="border p-2 w-full rounded" value={pass.new} onChange={e=>sPass({...pass,new:e.target.value})}/><input type="password" placeholder="තහවුරු කරන්න" className="border p-2 w-full rounded" value={pass.con} onChange={e=>sPass({...pass,con:e.target.value})}/><button onClick={()=>changeP('admin')} className="bg-red-600 text-white w-full py-2 rounded font-bold">වෙනස් කරන්න</button></div></div></div>;
+  const [adminPass, sAdminPass] = useState({old:'', new:'', con:''});
+  const [appPass, sAppPass] = useState({old:'', new:'', con:''}); // State for Worker PIN
+
+  const changeAdmin = async() => { if(adminPass.new!==adminPass.con || adminPass.new.length<4)return alert("මුරපදය ගැටළුවක්"); if(await onChangePin('admin', adminPass.old, adminPass.new)){alert("Admin PIN වෙනස් විය!"); sAdminPass({old:'',new:'',con:''})}else{alert("පරණ මුරපදය වැරදියි")} };
+  const changeApp = async() => { if(appPass.new!==appPass.con || appPass.new.length<4)return alert("මුරපදය ගැටළුවක්"); if(await onChangePin('app', appPass.old, appPass.new)){alert("සේවක PIN වෙනස් විය!"); sAppPass({old:'',new:'',con:''})}else{alert("පරණ මුරපදය වැරදියි")} };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Plots & Factories */}
+      <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">ඉඩම්</h3><div className="flex gap-2 mb-2"><input value={np} onChange={e=>sNp(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddPlot(np);sNp('')}} className="bg-blue-600 text-white px-4 rounded">Add</button></div>{plots.map(p=><div key={p.id} className="flex justify-between p-2 border-b"><span>{p.name}</span><button onClick={()=>onDelPlot(p.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
+      <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">කර්මාන්ත ශාලා</h3><div className="flex gap-2 mb-2"><input value={nf} onChange={e=>sNf(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddFac(nf);sNf('')}} className="bg-green-600 text-white px-4 rounded">Add</button></div>{factories.map(f=><div key={f.id} className="flex justify-between p-2 border-b"><span>{f.name}</span><button onClick={()=>onDelFac(f.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
+      
+      {/* Reminders */}
+      <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">මතක් කිරීම්</h3><div className="flex gap-2 mb-2"><input type="date" value={rd} onChange={e=>sRd(e.target.value)} className="border p-2 flex-1 rounded"/><button onClick={()=>{onAddRem(rd);sRd('')}} className="bg-purple-600 text-white px-4 rounded">Add</button></div>{reminders.map(r=><div key={r.id} className="flex justify-between p-2 border-b"><span>{formatDate(r.date)}</span><div className="flex gap-2">{r.status!=='completed'&&<button onClick={()=>onUpRem(r.id,'completed')} className="text-green-500"><Check size={16}/></button>}<button onClick={()=>onDelRem(r.id)} className="text-red-500"><X size={16}/></button></div></div>)}</div>
+      
+      {/* Admin PIN Change */}
+      <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><ShieldCheck size={18} className="text-red-600"/> Admin මුරපදය වෙනස් කිරීම</h3><div className="space-y-2"><input type="password" placeholder="පරණ එක" className="border p-2 w-full rounded" value={adminPass.old} onChange={e=>sAdminPass({...adminPass,old:e.target.value})}/><input type="password" placeholder="අලුත් එක" className="border p-2 w-full rounded" value={adminPass.new} onChange={e=>sAdminPass({...adminPass,new:e.target.value})}/><input type="password" placeholder="තහවුරු කරන්න" className="border p-2 w-full rounded" value={adminPass.con} onChange={e=>sAdminPass({...adminPass,con:e.target.value})}/><button onClick={changeAdmin} className="bg-red-600 text-white w-full py-2 rounded font-bold">Admin PIN වෙනස් කරන්න</button></div></div>
+
+      {/* Employee PIN Change (ADDED BACK) */}
+      <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><KeyRound size={18} className="text-blue-600"/> සේවක මුරපදය (Worker PIN)</h3><div className="space-y-2"><input type="password" placeholder="තහවුරු කිරීමට Admin PIN එක ගහන්න" className="border p-2 w-full rounded" value={appPass.old} onChange={e=>sAppPass({...appPass,old:e.target.value})}/><input type="password" placeholder="අලුත් සේවක PIN" className="border p-2 w-full rounded" value={appPass.new} onChange={e=>sAppPass({...appPass,new:e.target.value})}/><input type="password" placeholder="නැවතත් සේවක PIN" className="border p-2 w-full rounded" value={appPass.con} onChange={e=>sAppPass({...appPass,con:e.target.value})}/><button onClick={changeApp} className="bg-blue-600 text-white w-full py-2 rounded font-bold">සේවක PIN වෙනස් කරන්න</button></div></div>
+    </div>
+  );
 };
+
 const NavTab = ({active, onClick, icon:Icon, label}) => <button onClick={onClick} className={`flex items-center gap-2 px-4 py-3 border-b-2 ${active?'border-green-700 text-green-800':'border-transparent'}`}><Icon size={18}/>{label}</button>;
 const MobileNav = ({active, onClick, icon:Icon, label}) => <button onClick={onClick} className={`flex flex-col items-center ${active?'text-green-700':'text-gray-400'}`}><Icon size={20}/><span className="text-[10px]">{label}</span></button>;
 const StatBox = ({t,v,c}) => <div className="bg-white p-3 rounded shadow border"><div className={`w-8 h-8 rounded flex items-center justify-center text-white mb-2 ${c}`}><Sprout size={16}/></div><p className="text-xs text-gray-500 font-bold uppercase">{t}</p><p className="font-bold text-lg truncate">{v}</p></div>;
