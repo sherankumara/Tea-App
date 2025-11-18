@@ -14,10 +14,10 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, Sparkles, Loader2, MapPin, Pencil, Save, Camera
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, Sparkles, Loader2, MapPin, Pencil, Save, Camera, KeyRound
 } from 'lucide-react';
 
-// --- Firebase Config ---
+// --- Firebase Config (YOUR KEY) ---
 const firebaseConfig = {
   apiKey: "AIzaSyBrtv7D89sDboUrEkBEbXazJQlmjGF7C4g",
   authDomain: "my-teaapp.firebaseapp.com",
@@ -42,43 +42,66 @@ const compressImage = (file) => new Promise((resolve, reject) => {
   reader.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => { const cvs = document.createElement('canvas'), ctx = cvs.getContext('2d'); let w = img.width, h = img.height, m = 800; if(w>h){if(w>m){h*=m/w;w=m}}else{if(h>m){w*=m/h;h=m}}; cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h); resolve(cvs.toDataURL('image/jpeg',0.5)); }; };
 });
 
-// --- LOGIN SCREEN COMPONENT ---
+// --- SMART LOGIN SCREEN ---
 const AuthScreen = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleAuth = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
+    
+    // SMART LOGIC: If no '@' is typed, add the dummy domain automatically
+    let finalEmail = username.trim().toLowerCase();
+    if (!finalEmail.includes('@')) {
+      finalEmail = finalEmail + "@teamanager.com";
+    }
+
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, finalEmail, password);
     } catch (err) {
-      setError(err.message.includes('invalid-credential') ? "ඊමේල් හෝ මුරපදය වැරදියි" : err.message.includes('email-already-in-use') ? "මෙම ඊමේල් ලිපිනය දැනටමත් භාවිතා කර ඇත" : "දෝෂයක් ඇතිවිය. නැවත උත්සාහ කරන්න.");
+      console.error(err);
+      setError("නම හෝ මුරපදය වැරදියි. නැවත උත්සාහ කරන්න.");
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-green-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-800 to-green-900 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="text-center mb-6">
-          <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><Sprout className="w-10 h-10 text-green-600"/></div>
-          <h2 className="text-2xl font-bold text-gray-800">{isLogin ? "සාදරයෙන් පිළිගනිමු" : "නව ගිණුමක් සාදන්න"}</h2>
-          <p className="text-sm text-gray-500">ඔබේ තේ වතු දත්ත ආරක්ෂිතව තබාගන්න</p>
+        <div className="text-center mb-8">
+          <div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border-4 border-white"><Sprout className="w-12 h-12 text-green-600"/></div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2>
+          <p className="text-sm text-gray-500">Smart Tea Estate Manager</p>
         </div>
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 text-center">{error}</div>}
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div><label className="text-xs font-bold text-gray-600 uppercase">Email ලිපිනය</label><input type="email" required className="w-full p-3 border rounded-lg outline-none focus:border-green-500" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com"/></div>
-          <div><label className="text-xs font-bold text-gray-600 uppercase">මුරපදය (Password)</label><input type="password" required className="w-full p-3 border rounded-lg outline-none focus:border-green-500" value={password} onChange={e=>setPassword(e.target.value)} placeholder="******" minLength={6}/></div>
-          <button disabled={loading} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50">{loading ? "සකසමින්..." : (isLogin ? "ඇතුල් වන්න (Login)" : "ගිණුම සාදන්න (Register)")}</button>
+        
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium flex items-center justify-center gap-2"><AlertCircle size={16}/>{error}</div>}
+        
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම (Estate Name)</label>
+            <div className="relative">
+              <Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/>
+              <input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" 
+                value={username} onChange={e=>setUsername(e.target.value)} placeholder="උදා: kandauda" autoFocus />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1 ml-1">ඔබේ වත්තේ කෙටි නම පමණක් ඇතුළත් කරන්න.</p>
+          </div>
+          
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">මුරපදය (PIN)</label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/>
+              <input type="password" inputMode="numeric" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-bold tracking-widest text-lg" 
+                value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••" />
+            </div>
+          </div>
+          
+          <button disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-green-600/30 text-lg mt-2">
+            {loading ? "සකසමින්..." : "ඇතුල් වන්න"}
+          </button>
         </form>
-        <div className="mt-6 text-center"><button onClick={() => setIsLogin(!isLogin)} className="text-sm text-green-700 font-semibold hover:underline">{isLogin ? "ගිණුමක් නැද්ද? මෙතනින් සාදන්න" : "දැනටමත් ගිණුමක් තිබේද? Login වන්න"}</button></div>
       </div>
     </div>
   );
@@ -122,7 +145,6 @@ export default function App() {
   const handleLogout = () => { if(confirm("ඔබට ඉවත් වීමට අවශ්‍යද?")) signOut(auth); };
   const processedRecords = useMemo(() => records.map(rec => { const mId = rec.date.substring(0,7); const price = (rec.factoryId && prices[mId]?.[rec.factoryId]) || 0; const exp = (rec.laborCost||0)+(rec.transportCost||0)+(rec.otherCost||0); return { ...rec, monthId: mId, price, hasPrice: price>0, income: (rec.harvestAmount||0)*price, expenses: exp, profit: ((rec.harvestAmount||0)*price)-exp }; }), [records, prices]);
 
-  // Database Actions
   const handleSetupPin = async (p) => { if(p.length<4)return alert("අංක 4ක් අවශ්‍යයි"); await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {adminPin:p}); setSavedAdminPin(p); setAuthStatus('admin_view'); };
   const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAdminPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
   const addRec = async (d) => { await addDoc(collection(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`), {...d, createdAt: serverTimestamp()}); alert("සාර්ථකයි!"); };
@@ -140,7 +162,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20 md:pb-0">
       <header className="bg-green-800 text-white p-4 shadow-lg sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3"><div className="bg-white/20 p-2 rounded-full"><Sprout className="h-6 w-6"/></div><div><h1 className="text-lg font-bold">{authStatus==='worker_view'?"දත්ත ඇතුළත් කිරීම":"තේ වතු පාලක"}</h1><p className="text-xs opacity-80">{user.email}</p></div></div>
+          <div className="flex items-center gap-3"><div className="bg-white/20 p-2 rounded-full"><Sprout className="h-6 w-6"/></div><div><h1 className="text-lg font-bold">{authStatus==='worker_view'?"දත්ත ඇතුළත් කිරීම":"තේ වතු පාලක"}</h1><p className="text-xs opacity-80 font-mono">{user.email.split('@')[0]}</p></div></div>
           <div className="flex gap-2">
             {authStatus==='admin_view' && <button onClick={()=>setAuthStatus('worker_view')} className="bg-white/20 p-2 rounded"><LogOut size={16}/></button>}
             {authStatus==='admin_view' && <button onClick={()=>{setAuthStatus('login_app_pin');setActiveTab('dashboard')}} className="bg-white/20 p-2 rounded"><Lock size={16}/></button>}
