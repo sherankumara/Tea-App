@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { 
   getAuth, 
   signInWithEmailAndPassword,
@@ -15,7 +14,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Sparkles, Loader2, BrainCircuit, Key
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download, Calculator, Activity
 } from 'lucide-react';
 
 // --- Firebase Config ---
@@ -35,12 +34,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // --- Helpers ---
-// Safe Number Convertor to prevent NaN
-const toNum = (val) => {
-  const num = parseFloat(val);
-  return isNaN(num) ? 0 : num;
-};
-
+const toNum = (val) => { const num = parseFloat(val); return isNaN(num) ? 0 : num; };
 const formatLKR = (v) => new Intl.NumberFormat('si-LK', { style: 'currency', currency: 'LKR', minimumFractionDigits: 2 }).format(toNum(v));
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('si-LK', { year: 'numeric', month: 'long', day: 'numeric' }) : "";
 const getMonthName = (m) => m ? new Date(m.split('-')[0], parseInt(m.split('-')[1])-1).toLocaleDateString('si-LK', { year: 'numeric', month: 'long' }) : "";
@@ -48,21 +42,6 @@ const compressImage = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader(); reader.readAsDataURL(file);
   reader.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => { const cvs = document.createElement('canvas'), ctx = cvs.getContext('2d'); let w = img.width, h = img.height, m = 800; if(w>h){if(w>m){h*=m/w;w=m}}else{if(h>m){w*=m/h;h=m}}; cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h); resolve(cvs.toDataURL('image/jpeg',0.5)); }; };
 });
-
-// --- GEMINI FUNCTION ---
-const askGemini = async (prompt, apiKey) => {
-  if (!apiKey) return "කරුණාකර පළමුව සැකසුම් (Settings) පිටුවේ Gemini API Key එක ඇතුළත් කරන්න.";
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    return "දෝෂයක් ඇතිවිය. (API Key එක වැරදි හෝ කල් ඉකුත් වී ඇත). Settings හි Key එක පරීක්ෂා කරන්න.";
-  }
-};
 
 // --- AUTH SCREEN ---
 const AuthScreen = () => {
@@ -103,7 +82,6 @@ export default function App() {
   const [factories, setFactories] = useState([]);
   const [plots, setPlots] = useState([]);
   const [reminders, setReminders] = useState([]);
-  const [geminiKey, setGeminiKey] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [authStatus, setAuthStatus] = useState('loading');
@@ -119,9 +97,6 @@ export default function App() {
           setSavedAdminPin(pinDoc.data().adminPin); setSavedAppPin(pinDoc.data().appPin); setAuthStatus('login_app_pin');
         } else { setAuthStatus('setup_admin_pin'); }
 
-        const configDoc = await getDoc(doc(db, `artifacts/${__app_id}/users/${currentUser.uid}/settings`, 'config'));
-        if (configDoc.exists()) setGeminiKey(configDoc.data().geminiKey || '');
-        
         const unsub1 = onSnapshot(query(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/tea_records`), orderBy('date', 'desc')), s => setRecords(s.docs.map(d => ({id:d.id, ...d.data()}))));
         const unsub2 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/monthly_prices`), s => { const p={}; s.docs.forEach(d=>p[d.id]=d.data()); setPrices(p); });
         const unsub3 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/factories`), s => setFactories(s.docs.map(d => ({id:d.id, ...d.data()}))));
@@ -135,7 +110,8 @@ export default function App() {
   }, []);
 
   const handleLogout = () => { if(confirm("ඔබට ඉවත් වීමට අවශ්‍යද?")) signOut(auth); };
-  // FIXED: Added toNum() to prevent NaN
+  
+  // FIXED: Using toNum() to safely calculate stats and prevent NaN
   const processedRecords = useMemo(() => records.map(rec => { 
     const mId = rec.date ? rec.date.substring(0,7) : ""; 
     const price = (rec.factoryId && prices[mId]?.[rec.factoryId]) ? toNum(prices[mId][rec.factoryId]) : 0; 
@@ -159,7 +135,6 @@ export default function App() {
 
   const handleSetupPin = async (p) => { if(p.length<4)return alert("අංක 4ක් අවශ්‍යයි"); await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {adminPin:p}); setSavedAdminPin(p); setAuthStatus('admin_view'); };
   const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAdminPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
-  const saveGeminiKey = async (k) => { await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'config'), {geminiKey:k}, {merge:true}); setGeminiKey(k); alert("Gemini Key සුරැකින ලදී!"); };
 
   const addRec = async (d) => { await addDoc(collection(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`), {...d, createdAt: serverTimestamp()}); alert("සාර්ථකයි!"); };
   const upRec = async (d) => { const {id,...rest}=d; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
@@ -188,11 +163,11 @@ export default function App() {
       <main className="max-w-6xl mx-auto p-4">
         {authStatus==='worker_view' ? <EntryForm factories={factories} plots={plots} onSubmit={addRec} /> : (
           <>
-            {activeTab==='dashboard' && <DashboardView records={processedRecords} reminders={reminders} plots={plots} onUpdateReminder={(id,s)=>updateDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id),{status:s})} geminiKey={geminiKey} />}
+            {activeTab==='dashboard' && <DashboardView records={processedRecords} reminders={reminders} plots={plots} onUpdateReminder={(id,s)=>updateDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id),{status:s})} />}
             {activeTab==='reports' && <HistoryView records={processedRecords} plots={plots} factories={factories} onDelete={delRec} onUpdate={upRec} />}
             {activeTab==='entry' && <EntryForm factories={factories} plots={plots} onSubmit={addRec} />}
             {activeTab==='prices' && <PriceManager prices={prices} factories={factories} onSave={setPrice} />}
-            {activeTab==='settings' && <SettingsManager factories={factories} plots={plots} savedAdminPin={savedAdminPin} savedAppPin={savedAppPin} onAddFac={(n)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/factories`),{name:n})} onDelFac={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/factories`,id))} onAddPlot={(n)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/plots`),{name:n})} onDelPlot={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/plots`,id))} onChangePin={handleUpdatePin} reminders={reminders} onAddRem={(d)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/reminders`),{date:d,status:'pending'})} onDelRem={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id))} onUpRem={(id,s)=>updateDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id),{status:s})} geminiKey={geminiKey} onSaveGemini={saveGeminiKey} />}
+            {activeTab==='settings' && <SettingsManager factories={factories} plots={plots} savedAdminPin={savedAdminPin} savedAppPin={savedAppPin} onAddFac={(n)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/factories`),{name:n})} onDelFac={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/factories`,id))} onAddPlot={(n)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/plots`),{name:n})} onDelPlot={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/plots`,id))} onChangePin={handleUpdatePin} reminders={reminders} onAddRem={(d)=>addDoc(collection(db,`artifacts/${__app_id}/users/${user.uid}/reminders`),{date:d,status:'pending'})} onDelRem={(id)=>deleteDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id))} onUpRem={(id,s)=>updateDoc(doc(db,`artifacts/${__app_id}/users/${user.uid}/reminders`,id),{status:s})} />}
           </>
         )}
       </main>
@@ -207,11 +182,11 @@ const PinScreen = ({title, message, onSubmit, buttonText, icon:Icon, onAdmin, sh
   return <div className="min-h-screen bg-green-900 flex items-center justify-center p-4"><div className="bg-white p-8 rounded-2xl w-full max-w-md text-center"><div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Icon className="w-10 h-10 text-green-600"/></div><h2 className="text-2xl font-bold mb-2">{title}</h2><p className="text-gray-500 mb-6">{message}</p><form onSubmit={e=>{e.preventDefault(); onSubmit(p); sP('')}}><input type="password" inputMode="numeric" maxLength="6" className="w-full text-center text-3xl font-bold p-4 border-2 rounded-xl mb-6" value={p} onChange={e=>sP(e.target.value)} autoFocus/><button className="w-full bg-green-700 text-white font-bold py-4 rounded-xl mb-4">{buttonText}</button></form>{showAdminBtn && <button onClick={onAdmin} className="text-blue-600 text-sm font-bold">Admin පිවිසුම</button>}</div></div>;
 };
 
-const DashboardView = ({records, plots, reminders, onUpdateReminder, geminiKey}) => {
+// --- AUTOMATED SUMMARY DASHBOARD ---
+const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [p, sP] = useState('all');
-  const [aiRes, sAiRes] = useState(null); const [aiLoad, sAiLoad] = useState(false);
-
-  // FIXED: Using toNum() to safely calculate stats
+  
+  // Safe Calculations
   const recs = records.filter(r => r.monthId===m && (p==='all' || r.plotId===p));
   const stats = recs.reduce((acc, r) => ({ 
     h: acc.h + toNum(r.harvest), 
@@ -221,6 +196,24 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder, geminiKey})
   }), {h:0,e:0,i:0,p:0});
   
   const due = reminders.filter(r => r.status==='pending' && new Date(r.date) <= new Date());
+
+  // LOGIC FOR AUTOMATED SUMMARY
+  const costPerKg = stats.h > 0 ? (stats.e / stats.h) : 0;
+  const profit = stats.i - stats.e;
+  let summaryText = "";
+  let adviceText = "";
+
+  if (stats.h === 0) {
+    summaryText = "මෙම මාසය සඳහා දත්ත තවම ඇතුළත් කර නොමැත.";
+    adviceText = "කරුණාකර දිනපතා දත්ත යාවත්කාලීන කරන්න.";
+  } else {
+    summaryText = `මෙම මාසයේ මුළු ලාභය ${formatLKR(profit)} ක් වන අතර, දළු කිලෝ 1ක් සඳහා නිෂ්පාදන වියදම රු. ${costPerKg.toFixed(2)} කි.`;
+    if (profit > 0) {
+        adviceText = "✅ ලාභදායී තත්ත්වයක්! ඔබේ වියදම් පාලනය ඉතා හොඳයි. දිගටම මෙම තත්ත්වය පවත්වා ගන්න.";
+    } else {
+        adviceText = "⚠️ අවධානයට! ආදායමට වඩා වියදම් ඉහළ ගොස් ඇත. කම්කරු සහ ප්‍රවාහන වියදම් ගැන සැලකිලිමත් වන්න.";
+    }
+  }
 
   const yearlyData = useMemo(() => {
     const data = [];
@@ -235,16 +228,6 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder, geminiKey})
     return data;
   }, [records]);
 
-  const handleAI = async () => {
-    if(!geminiKey) return alert("කරුණාකර පළමුව සැකසුම් (Settings) පිටුවේ Gemini API Key එක ඇතුළත් කරන්න.");
-    sAiLoad(true); sAiRes(null);
-    const prompt = `You are an expert tea estate consultant. Analyze this data for ${getMonthName(m)} in Sinhala language.
-    Harvest: ${stats.h}kg, Income: ${formatLKR(stats.i)}, Expenses: ${formatLKR(stats.e)}, Profit: ${formatLKR(stats.i-stats.e)}.
-    Provide 3 bullet points of advice in Sinhala on how to improve profit and reduce cost based on these numbers. Keep it encouraging.`;
-    const text = await askGemini(prompt, geminiKey);
-    sAiRes(text); sAiLoad(false);
-  };
-
   return (
     <div className="space-y-6">
       {due.length>0 && <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500"><div className="flex items-center gap-3 mb-2"><BellRing className="text-blue-600"/><h3 className="font-bold text-blue-800">මතක් කිරීම්!</h3></div>{due.map(d=><div key={d.id} className="flex justify-between items-center bg-white p-2 rounded mt-1 text-sm shadow-sm"><p><strong>{formatDate(d.date)}</strong> පොහොර යෙදීම.</p><button onClick={()=>onUpdateReminder(d.id,'completed')} className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">හරි</button></div>)}</div>}
@@ -252,13 +235,15 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder, geminiKey})
       <div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>
       
-      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-bold text-purple-800 flex items-center gap-2"><Sparkles size={18}/> Gemini විශ්ලේෂණය</h3>
-          <button onClick={handleAI} disabled={aiLoad} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 disabled:opacity-50">{aiLoad?<Loader2 className="animate-spin" size={14}/>:<BrainCircuit size={14}/>} විමසන්න</button>
+      {/* AUTOMATED SUMMARY SECTION */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-xl border border-green-100 shadow-sm">
+        <h3 className="font-bold text-green-800 flex items-center gap-2 mb-3"><Activity size={20}/> මාසික විග්‍රහය</h3>
+        <div className="space-y-2">
+             <p className="text-gray-700 font-medium text-sm leading-relaxed"><Calculator size={14} className="inline mr-1 text-gray-400"/> {summaryText}</p>
+             <div className={`text-sm p-3 rounded-lg font-semibold ${profit >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {adviceText}
+             </div>
         </div>
-        {!geminiKey && <p className="text-xs text-red-500 mb-2">API Key එක ඇතුළත් කර නොමැත. කරුණාකර Settings වෙත යන්න.</p>}
-        {aiRes && <div className="text-sm text-purple-900 bg-white p-3 rounded-lg shadow-sm whitespace-pre-line leading-relaxed">{aiRes}</div>}
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
@@ -279,8 +264,6 @@ const EntryForm = ({factories, plots, onSubmit}) => {
 const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [editRec, sEditRec] = useState(null);
   const recs = records.filter(r => r.monthId===m);
-
-  // EXPORT FUNCTION
   const downloadCSV = () => {
     if(!recs.length) return alert("දත්ත නොමැත");
     const headers = ["Date", "Plot", "Factory", "Harvest(kg)", "Expenses", "Income", "Profit", "Notes"];
@@ -289,40 +272,11 @@ const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
     link.download = `Tea_Records_${m}.csv`; document.body.appendChild(link); link.click();
   };
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center bg-white p-3 rounded shadow">
-        <div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div>
-        <button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> CSV</button>
-      </div>
-      
+      <div className="flex justify-between items-center bg-white p-3 rounded shadow"><div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div><button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> CSV</button></div>
       {recs.length===0 ? <div className="text-center py-10 text-gray-400">දත්ත නැත</div> : <div className="bg-white rounded shadow overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-xs uppercase"><tr><th className="p-3">දිනය</th><th className="p-3">අස්වැන්න</th><th className="p-3">ආදායම</th><th className="p-3 text-center">ක්‍රියා</th></tr></thead><tbody>{recs.map(r=><tr key={r.id} className="border-t"><td className="p-3 font-bold">{formatDate(r.date)}<div className="text-xs font-normal text-gray-500">{r.plotName}</div></td><td className="p-3 text-green-700 font-bold">{r.harvest} kg</td><td className="p-3">{r.hasPrice?formatLKR(r.income):<span className="text-xs bg-yellow-200 px-1 rounded">Pending</span>}</td><td className="p-3 flex justify-center gap-3"><button onClick={()=>sEditRec(r)} className="text-blue-500"><Pencil size={16}/></button><button onClick={()=>onDelete(r.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>}
-      
-      {/* EDIT MODAL */}
-      {editRec && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="font-bold text-lg mb-4">සංස්කරණය (Edit)</h3>
-            <form onSubmit={(e)=>{e.preventDefault(); onUpdate(editRec); sEditRec(null)}} className="space-y-3">
-              <div><label className="text-xs">දිනය</label><input type="date" value={editRec.date} onChange={e=>sEditRec({...editRec, date:e.target.value})} className="w-full border p-2 rounded"/></div>
-              <div><label className="text-xs">ඉඩම</label><select value={editRec.plotId} onChange={e=>sEditRec({...editRec, plotId:e.target.value})} className="w-full border p-2 rounded">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-              <div><label className="text-xs">දළු ප්‍රමාණය (KG)</label><input type="number" step="0.1" value={editRec.harvestAmount} onChange={e=>sEditRec({...editRec, harvestAmount:Number(e.target.value)})} className="w-full border p-2 rounded bg-green-50 font-bold"/></div>
-              <div><label className="text-xs">කම්කරු ගණන</label><input type="number" value={editRec.workerCount} onChange={e=>sEditRec({...editRec, workerCount:Number(e.target.value)})} className="w-full border p-2 rounded"/></div>
-              <div className="grid grid-cols-3 gap-2">
-                 <div><label className="text-[10px]">පඩි</label><input type="number" value={editRec.laborCost} onChange={e=>sEditRec({...editRec, laborCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-                 <div><label className="text-[10px]">ප්‍රවාහන</label><input type="number" value={editRec.transportCost} onChange={e=>sEditRec({...editRec, transportCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-                 <div><label className="text-[10px]">වෙනත්</label><input type="number" value={editRec.otherCost} onChange={e=>sEditRec({...editRec, otherCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
-              </div>
-              <div><label className="text-xs">සටහන් (Notes)</label><textarea value={editRec.notes} onChange={e=>sEditRec({...editRec, notes:e.target.value})} className="w-full p-2 border rounded h-16"/></div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={()=>sEditRec(null)} className="flex-1 bg-gray-200 py-2 rounded font-bold text-gray-700">අවලංගු කරන්න</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded font-bold">සුරකින්න</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {editRec && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"><h3 className="font-bold text-lg mb-4">සංස්කරණය (Edit)</h3><form onSubmit={(e)=>{e.preventDefault(); onUpdate(editRec); sEditRec(null)}} className="space-y-3"><div><label className="text-xs">දිනය</label><input type="date" value={editRec.date} onChange={e=>sEditRec({...editRec, date:e.target.value})} className="w-full border p-2 rounded"/></div><div><label className="text-xs">ඉඩම</label><select value={editRec.plotId} onChange={e=>sEditRec({...editRec, plotId:e.target.value})} className="w-full border p-2 rounded">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div><label className="text-xs">දළු ප්‍රමාණය (KG)</label><input type="number" step="0.1" value={editRec.harvestAmount} onChange={e=>sEditRec({...editRec, harvestAmount:Number(e.target.value)})} className="w-full border p-2 rounded bg-green-50 font-bold"/></div><div><label className="text-xs">කම්කරු ගණන</label><input type="number" value={editRec.workerCount} onChange={e=>sEditRec({...editRec, workerCount:Number(e.target.value)})} className="w-full border p-2 rounded"/></div><div className="grid grid-cols-3 gap-2"><div><label className="text-[10px]">පඩි</label><input type="number" value={editRec.laborCost} onChange={e=>sEditRec({...editRec, laborCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div><div><label className="text-[10px]">ප්‍රවාහන</label><input type="number" value={editRec.transportCost} onChange={e=>sEditRec({...editRec, transportCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div><div><label className="text-[10px]">වෙනත්</label><input type="number" value={editRec.otherCost} onChange={e=>sEditRec({...editRec, otherCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div></div><div><label className="text-xs">සටහන් (Notes)</label><textarea value={editRec.notes} onChange={e=>sEditRec({...editRec, notes:e.target.value})} className="w-full p-2 border rounded h-16"/></div><div className="flex gap-2 pt-2"><button type="button" onClick={()=>sEditRec(null)} className="flex-1 bg-gray-200 py-2 rounded font-bold text-gray-700">අවලංගු කරන්න</button><button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded font-bold">සුරකින්න</button></div></form></div></div>)}
     </div>
   );
 };
@@ -333,20 +287,16 @@ const PriceManager = ({prices, factories, onSave}) => {
   return <div className="bg-white p-6 rounded max-w-md mx-auto"><h2 className="font-bold mb-4">මිල ගණන්</h2><input type="month" value={m} onChange={e=>sM(e.target.value)} className="w-full border p-2 rounded mb-4"/><div className="space-y-2">{factories.map(f=><div key={f.id} className="flex justify-between items-center"><span>{f.name}</span><input type="number" value={inp[f.id]||''} onChange={e=>sInp({...inp,[f.id]:e.target.value})} placeholder="Rs." className="border p-2 rounded w-24 text-right"/></div>)}</div><button onClick={()=>onSave(m,inp)} className="w-full bg-yellow-500 text-white font-bold py-2 rounded mt-4">සුරකින්න</button></div>;
 };
 
-const SettingsManager = ({factories, plots, onAddFac, onDelFac, onAddPlot, onDelPlot, onChangePin, savedAdminPin, savedAppPin, reminders, onAddRem, onDelRem, onUpRem, geminiKey, onSaveGemini}) => {
+const SettingsManager = ({factories, plots, onAddFac, onDelFac, onAddPlot, onDelPlot, onChangePin, savedAdminPin, savedAppPin, reminders, onAddRem, onDelRem, onUpRem}) => {
   const [nf, sNf] = useState(''); const [np, sNp] = useState(''); const [rd, sRd] = useState('');
   const [adminPass, sAdminPass] = useState({old:'', new:'', con:''});
   const [appPass, sAppPass] = useState({old:'', new:'', con:''});
-  const [key, sKey] = useState(geminiKey);
 
   const changeAdmin = async() => { if(adminPass.new!==adminPass.con || adminPass.new.length<4)return alert("මුරපදය ගැටළුවක්"); if(await onChangePin('admin', adminPass.old, adminPass.new)){alert("Admin PIN වෙනස් විය!"); sAdminPass({old:'',new:'',con:''})}else{alert("පරණ මුරපදය වැරදියි")} };
   const changeApp = async() => { if(appPass.new!==appPass.con || appPass.new.length<4)return alert("මුරපදය ගැටළුවක්"); if(await onChangePin('app', appPass.old, appPass.new)){alert("සේවක PIN වෙනස් විය!"); sAppPass({old:'',new:'',con:''})}else{alert("Admin මුරපදය වැරදියි")} };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* GEMINI KEY SETTING */}
-      <div className="bg-purple-50 border border-purple-200 p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2 text-purple-800"><Sparkles size={18}/> Gemini API Key (AI සඳහා)</h3><div className="flex gap-2 mb-2"><input value={key} onChange={e=>sKey(e.target.value)} className="border p-2 flex-1 rounded text-sm" placeholder="AIza..." type="password"/><button onClick={()=>onSaveGemini(key)} className="bg-purple-600 text-white px-4 rounded font-bold">Save Key</button></div><p className="text-[10px] text-gray-500">ඔබේ Google AI Studio Key එක මෙතැනට Paste කරන්න.</p></div>
-      
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">ඉඩම්</h3><div className="flex gap-2 mb-2"><input value={np} onChange={e=>sNp(e.target.value)} className="border p-2 flex-1 rounded" placeholder="ඉඩමේ නම (උදා: මහ වත්ත)"/><button onClick={()=>{onAddPlot(np);sNp('')}} className="bg-blue-600 text-white px-4 rounded">Add</button></div>{plots.map(p=><div key={p.id} className="flex justify-between p-2 border-b"><span>{p.name}</span><button onClick={()=>onDelPlot(p.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">කර්මාන්ත ශාලා</h3><div className="flex gap-2 mb-2"><input value={nf} onChange={e=>sNf(e.target.value)} className="border p-2 flex-1 rounded" placeholder="කර්මාන්ත ශාලාව (උදා: ABC Factory)"/><button onClick={()=>{onAddFac(nf);sNf('')}} className="bg-green-600 text-white px-4 rounded">Add</button></div>{factories.map(f=><div key={f.id} className="flex justify-between p-2 border-b"><span>{f.name}</span><button onClick={()=>onDelFac(f.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><Bell size={18}/> පොහොර මතක් කිරීම්</h3><div className="flex gap-2 mb-2"><input type="date" value={rd} onChange={e=>sRd(e.target.value)} className="border p-2 flex-1 rounded"/><button onClick={()=>{onAddRem(rd);sRd('')}} className="bg-purple-600 text-white px-4 rounded">Add</button></div>{reminders.map(r=><div key={r.id} className="flex justify-between p-2 border-b"><span>{formatDate(r.date)}</span><div className="flex gap-2">{r.status!=='completed'&&<button onClick={()=>onUpRem(r.id,'completed')} className="text-green-500"><Check size={16}/></button>}<button onClick={()=>onDelRem(r.id)} className="text-red-500"><X size={16}/></button></div></div>)}</div>
