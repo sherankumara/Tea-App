@@ -72,6 +72,7 @@ const firebaseConfig = {
   storageBucket: "my-teaapp.firebasestorage.app",
   messagingSenderId: "97042947360",
   appId: "1:97042947360:web:9b7a276e93f71dfa118b45"
+  const __app_id = "my_tea_app_01";
 };const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
