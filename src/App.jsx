@@ -14,7 +14,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound
+  LayoutDashboard, PlusCircle, FileText, Sprout, TrendingUp, TrendingDown, Wallet, Trash2, Coins, AlertCircle, Lock, Settings, Building2, Factory, CalendarDays, Bell, Check, X, BellRing, UserCheck, ShieldCheck, LogOut, MapPin, Pencil, Save, Camera, KeyRound, Download
 } from 'lucide-react';
 
 // --- Firebase Config ---
@@ -42,7 +42,7 @@ const compressImage = (file) => new Promise((resolve, reject) => {
   reader.onload = (e) => { const img = new Image(); img.src = e.target.result; img.onload = () => { const cvs = document.createElement('canvas'), ctx = cvs.getContext('2d'); let w = img.width, h = img.height, m = 800; if(w>h){if(w>m){h*=m/w;w=m}}else{if(h>m){w*=m/h;h=m}}; cvs.width=w; cvs.height=h; ctx.drawImage(img,0,0,w,h); resolve(cvs.toDataURL('image/jpeg',0.5)); }; };
 });
 
-// --- LOGIN SCREEN ---
+// --- AUTH SCREEN ---
 const AuthScreen = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -61,11 +61,7 @@ const AuthScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-800 to-green-900 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border-4 border-white"><Sprout className="w-12 h-12 text-green-600"/></div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2>
-          <p className="text-sm text-gray-500">Smart Tea Estate Manager</p>
-        </div>
+        <div className="text-center mb-8"><div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border-4 border-white"><Sprout className="w-12 h-12 text-green-600"/></div><h2 className="text-3xl font-bold text-gray-800 mb-1">ආයුබෝවන්! 🙏</h2><p className="text-sm text-gray-500">Smart Tea Estate Manager</p></div>
         {error && <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium flex items-center justify-center gap-2"><AlertCircle size={16}/>{error}</div>}
         <form onSubmit={handleLogin} className="space-y-5">
           <div><label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block ml-1">වත්තේ නම</label><div className="relative"><Building2 className="absolute left-3 top-3.5 text-gray-400 w-5 h-5"/><input type="text" required className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all font-medium" value={username} onChange={e=>setUsername(e.target.value)} placeholder="kandauda" autoFocus /></div></div>
@@ -99,6 +95,7 @@ export default function App() {
         if (pinDoc.exists() && pinDoc.data().adminPin) {
           setSavedAdminPin(pinDoc.data().adminPin); setSavedAppPin(pinDoc.data().appPin); setAuthStatus('login_app_pin');
         } else { setAuthStatus('setup_admin_pin'); }
+        
         const unsub1 = onSnapshot(query(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/tea_records`), orderBy('date', 'desc')), s => setRecords(s.docs.map(d => ({id:d.id, ...d.data()}))));
         const unsub2 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/monthly_prices`), s => { const p={}; s.docs.forEach(d=>p[d.id]=d.data()); setPrices(p); });
         const unsub3 = onSnapshot(collection(db, `artifacts/${__app_id}/users/${currentUser.uid}/factories`), s => setFactories(s.docs.map(d => ({id:d.id, ...d.data()}))));
@@ -117,7 +114,7 @@ export default function App() {
   const handleSetupPin = async (p) => { if(p.length<4)return alert("අංක 4ක් අවශ්‍යයි"); await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {adminPin:p}); setSavedAdminPin(p); setAuthStatus('admin_view'); };
   const handleUpdatePin = async (type, oldP, newP) => { if(type==='admin' && oldP!==savedAdminPin) return false; if(type==='app' && oldP!==savedAdminPin) return false; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/settings`, 'security'), {[type==='admin'?'adminPin':'appPin']:newP}); if(type==='admin') setSavedAdminPin(newP); else setSavedAppPin(newP); return true; };
   const addRec = async (d) => { await addDoc(collection(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`), {...d, createdAt: serverTimestamp()}); alert("සාර්ථකයි!"); };
-  const upRec = async (d) => { const {id,...rest}=d; const p=plots.find(x=>x.id===d.plotId); const f=factories.find(x=>x.id===d.factoryId); await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, plotName:p?.name, factoryName:f?.name, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
+  const upRec = async (d) => { const {id,...rest}=d; await updateDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id), {...rest, updatedAt: serverTimestamp()}); alert("යාවත්කාලීනයි!"); };
   const delRec = async (id) => { if(confirm("මකා දමන්නද?")) await deleteDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/tea_records`, id)); };
   const setPrice = async (m, p) => { await setDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/monthly_prices`, m), {...p, updatedAt: serverTimestamp()}, {merge:true}); alert("මිල යාවත්කාලීනයි"); };
   
@@ -166,7 +163,7 @@ const DashboardView = ({records, plots, reminders, onUpdateReminder}) => {
   const recs = records.filter(r => r.monthId===m && (p==='all' || r.plotId===p));
   const stats = recs.reduce((acc, r) => ({ ...acc, h: acc.h+r.harvest, e: acc.e+r.expenses, i: acc.i+(r.hasPrice?r.income:0), p: acc.p+(r.hasPrice?0:r.harvest) }), {h:0,e:0,i:0,p:0});
   const due = reminders.filter(r => r.status==='pending' && new Date(r.date) <= new Date());
-  return <div className="space-y-6">{due.length>0 && <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500"><div className="flex items-center gap-3 mb-2"><BellRing className="text-blue-600"/><h3 className="font-bold text-blue-800">මතක් කිරීම්!</h3></div>{due.map(d=><div key={d.id} className="flex justify-between items-center bg-white p-2 rounded mt-1 text-sm shadow-sm"><p><strong>{formatDate(d.date)}</strong> දිනට පොහොර යෙදීම.</p><button onClick={()=>onUpdateReminder(d.id,'completed')} className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">හරි</button></div>)}</div>}<div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>{stats.p>0 && <div className="bg-yellow-50 p-2 rounded text-yellow-700 text-sm">මිල නොදැමූ දළු: {stats.p} kg</div>}</div>;
+  return <div className="space-y-6">{due.length>0 && <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500"><div className="flex items-center gap-3 mb-2"><BellRing className="text-blue-600"/><h3 className="font-bold text-blue-800">මතක් කිරීම්!</h3></div>{due.map(d=><div key={d.id} className="flex justify-between items-center bg-white p-2 rounded mt-1 text-sm shadow-sm"><p><strong>{formatDate(d.date)}</strong> පොහොර යෙදීම.</p><button onClick={()=>onUpdateReminder(d.id,'completed')} className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">හරි</button></div>)}</div>}<div className="flex justify-between items-center"><h2 className="font-bold text-lg">{getMonthName(m)}</h2><div className="flex gap-2"><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/><select value={p} onChange={e=>sP(e.target.value)} className="border p-1 rounded"><option value="all">සියල්ල</option>{plots.map(pl=><option key={pl.id} value={pl.id}>{pl.name}</option>)}</select></div></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><StatBox t="අස්වැන්න" v={stats.h.toFixed(1)+" kg"} c="bg-green-500"/><StatBox t="ආදායම" v={formatLKR(stats.i)} c="bg-blue-500"/><StatBox t="වියදම" v={formatLKR(stats.e)} c="bg-red-500"/><StatBox t="ලාභය" v={formatLKR(stats.i-stats.e)} c="bg-emerald-600"/></div>{stats.p>0 && <div className="bg-yellow-50 p-2 rounded text-yellow-700 text-sm">මිල නොදැමූ දළු: {stats.p} kg</div>}</div>;
 };
 const EntryForm = ({factories, plots, onSubmit}) => {
   const [d, sD] = useState({date:new Date().toISOString().split('T')[0], plotId:'', factoryId:'', harvestAmount:'', workerCount:'', laborCost:'', transportCost:'', otherCost:'', notes:'', image:null});
@@ -174,11 +171,58 @@ const EntryForm = ({factories, plots, onSubmit}) => {
   const sub = (e) => { e.preventDefault(); if(!d.plotId)return alert('ඉඩම තෝරන්න'); onSubmit({...d, harvestAmount:Number(d.harvestAmount), workerCount:Number(d.workerCount), laborCost:Number(d.laborCost), transportCost:Number(d.transportCost), otherCost:Number(d.otherCost)}); sD(p=>({...p, harvestAmount:'', workerCount:'', laborCost:'', transportCost:'', otherCost:'', notes:'', image:null})); };
   return <div className="bg-white p-6 rounded-xl shadow-sm max-w-2xl mx-auto"><h2 className="font-bold text-lg mb-4">නව දත්ත</h2><form onSubmit={sub} className="space-y-4"><div className="grid grid-cols-2 gap-4"><input type="date" value={d.date} onChange={e=>sD({...d,date:e.target.value})} className="border p-2 rounded w-full"/><select value={d.plotId} onChange={e=>sD({...d,plotId:e.target.value})} className="border p-2 rounded w-full">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div className="grid grid-cols-2 gap-4"><input type="number" step="0.1" placeholder="දළු KG" value={d.harvestAmount} onChange={e=>sD({...d,harvestAmount:e.target.value})} className="border p-2 rounded bg-green-50 font-bold"/><input type="number" placeholder="කම්කරු ගණන" value={d.workerCount} onChange={e=>sD({...d,workerCount:e.target.value})} className="border p-2 rounded"/></div>{Number(d.harvestAmount)>0 && <select value={d.factoryId} onChange={e=>sD({...d,factoryId:e.target.value})} className="border p-2 rounded w-full">{factories.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>}<div className="bg-red-50 p-3 rounded"><p className="text-xs font-bold mb-2">වියදම්</p><div className="grid grid-cols-3 gap-2"><input type="number" placeholder="පඩි" value={d.laborCost} onChange={e=>sD({...d,laborCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="ප්‍රවාහන" value={d.transportCost} onChange={e=>sD({...d,transportCost:e.target.value})} className="border p-1 rounded text-sm"/><input type="number" placeholder="වෙනත්" value={d.otherCost} onChange={e=>sD({...d,otherCost:e.target.value})} className="border p-1 rounded text-sm"/></div></div><div className="border p-2 rounded"><p className="text-xs text-gray-500 mb-1">ඡායාරූපය</p><input type="file" accept="image/*" onChange={async(e)=>{if(e.target.files[0])sD({...d,image:await compressImage(e.target.files[0])})}}/></div><button className="w-full bg-green-700 text-white py-3 rounded-lg font-bold">සුරකින්න</button></form></div>;
 };
+
+// --- UPDATED HISTORY VIEW WITH EDIT & EXPORT ---
 const HistoryView = ({records, onDelete, onUpdate, plots, factories}) => {
-  const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [edit, sEdit] = useState(null);
+  const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [editRec, sEditRec] = useState(null);
   const recs = records.filter(r => r.monthId===m);
-  return <div className="space-y-4"><div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-2 rounded"/></div>{recs.length===0 ? <div className="text-center py-10 text-gray-400">දත්ත නැත</div> : <div className="bg-white rounded shadow overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-xs uppercase"><tr><th className="p-3">දිනය</th><th className="p-3">අස්වැන්න</th><th className="p-3">ආදායම</th><th className="p-3">ක්‍රියා</th></tr></thead><tbody>{recs.map(r=><tr key={r.id} className="border-t"><td className="p-3 font-bold">{formatDate(r.date)}<div className="text-xs font-normal text-gray-500">{r.plotName}</div></td><td className="p-3 text-green-700 font-bold">{r.harvest} kg</td><td className="p-3">{r.hasPrice?formatLKR(r.income):<span className="text-xs bg-yellow-200 px-1 rounded">Pending</span>}</td><td className="p-3 flex gap-2"><button onClick={()=>onDelete(r.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>}</div>;
+
+  // EXPORT FUNCTION
+  const downloadCSV = () => {
+    if(!recs.length) return alert("දත්ත නොමැත");
+    const headers = ["Date", "Plot", "Factory", "Harvest(kg)", "Expenses", "Income", "Profit"];
+    const rows = recs.map(r => [r.date, r.plotName, r.factoryName, r.harvest, r.expenses, r.income, r.profit]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }));
+    link.download = `Tea_Records_${m}.csv`; document.body.appendChild(link); link.click();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-white p-3 rounded shadow">
+        <div className="flex items-center gap-2"><label>මාසය:</label><input type="month" value={m} onChange={e=>sM(e.target.value)} className="border p-1 rounded"/></div>
+        <button onClick={downloadCSV} className="bg-blue-50 text-blue-600 px-3 py-1 rounded flex items-center gap-2 text-sm font-bold"><Download size={16}/> Export CSV</button>
+      </div>
+      
+      {recs.length===0 ? <div className="text-center py-10 text-gray-400">දත්ත නැත</div> : <div className="bg-white rounded shadow overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-100 text-xs uppercase"><tr><th className="p-3">දිනය</th><th className="p-3">අස්වැන්න</th><th className="p-3">ආදායම</th><th className="p-3 text-center">ක්‍රියා</th></tr></thead><tbody>{recs.map(r=><tr key={r.id} className="border-t"><td className="p-3 font-bold">{formatDate(r.date)}<div className="text-xs font-normal text-gray-500">{r.plotName}</div></td><td className="p-3 text-green-700 font-bold">{r.harvest} kg</td><td className="p-3">{r.hasPrice?formatLKR(r.income):<span className="text-xs bg-yellow-200 px-1 rounded">Pending</span>}</td><td className="p-3 flex justify-center gap-3"><button onClick={()=>sEditRec(r)} className="text-blue-500"><Pencil size={16}/></button><button onClick={()=>onDelete(r.id)} className="text-red-500"><Trash2 size={16}/></button></td></tr>)}</tbody></table></div>}
+      
+      {/* EDIT MODAL */}
+      {editRec && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="font-bold text-lg mb-4">සංස්කරණය (Edit)</h3>
+            <form onSubmit={(e)=>{e.preventDefault(); onUpdate(editRec); sEditRec(null)}} className="space-y-3">
+              <div><label className="text-xs">දිනය</label><input type="date" value={editRec.date} onChange={e=>sEditRec({...editRec, date:e.target.value})} className="w-full border p-2 rounded"/></div>
+              <div><label className="text-xs">ඉඩම</label><select value={editRec.plotId} onChange={e=>sEditRec({...editRec, plotId:e.target.value})} className="w-full border p-2 rounded">{plots.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+              <div><label className="text-xs">දළු ප්‍රමාණය (KG)</label><input type="number" step="0.1" value={editRec.harvestAmount} onChange={e=>sEditRec({...editRec, harvestAmount:Number(e.target.value)})} className="w-full border p-2 rounded bg-green-50 font-bold"/></div>
+              <div><label className="text-xs">කම්කරු ගණන</label><input type="number" value={editRec.workerCount} onChange={e=>sEditRec({...editRec, workerCount:Number(e.target.value)})} className="w-full border p-2 rounded"/></div>
+              <div className="grid grid-cols-3 gap-2">
+                 <div><label className="text-[10px]">පඩි</label><input type="number" value={editRec.laborCost} onChange={e=>sEditRec({...editRec, laborCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
+                 <div><label className="text-[10px]">ප්‍රවාහන</label><input type="number" value={editRec.transportCost} onChange={e=>sEditRec({...editRec, transportCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
+                 <div><label className="text-[10px]">වෙනත්</label><input type="number" value={editRec.otherCost} onChange={e=>sEditRec({...editRec, otherCost:Number(e.target.value)})} className="border p-1 w-full rounded"/></div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={()=>sEditRec(null)} className="flex-1 bg-gray-200 py-2 rounded font-bold text-gray-700">අවලංගු කරන්න</button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded font-bold">සුරකින්න</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
+
 const PriceManager = ({prices, factories, onSave}) => {
   const [m, sM] = useState(new Date().toISOString().slice(0,7)); const [inp, sInp] = useState({});
   useEffect(()=>sInp(prices[m]||{}),[m,prices]);
@@ -195,17 +239,10 @@ const SettingsManager = ({factories, plots, onAddFac, onDelFac, onAddPlot, onDel
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Plots & Factories */}
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">ඉඩම්</h3><div className="flex gap-2 mb-2"><input value={np} onChange={e=>sNp(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddPlot(np);sNp('')}} className="bg-blue-600 text-white px-4 rounded">Add</button></div>{plots.map(p=><div key={p.id} className="flex justify-between p-2 border-b"><span>{p.name}</span><button onClick={()=>onDelPlot(p.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2">කර්මාන්ත ශාලා</h3><div className="flex gap-2 mb-2"><input value={nf} onChange={e=>sNf(e.target.value)} className="border p-2 flex-1 rounded" placeholder="නම"/><button onClick={()=>{onAddFac(nf);sNf('')}} className="bg-green-600 text-white px-4 rounded">Add</button></div>{factories.map(f=><div key={f.id} className="flex justify-between p-2 border-b"><span>{f.name}</span><button onClick={()=>onDelFac(f.id)}><Trash2 size={16} className="text-red-500"/></button></div>)}</div>
-      
-      {/* Reminders (ADDED BACK) */}
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><Bell size={18}/> පොහොර මතක් කිරීම්</h3><div className="flex gap-2 mb-2"><input type="date" value={rd} onChange={e=>sRd(e.target.value)} className="border p-2 flex-1 rounded"/><button onClick={()=>{onAddRem(rd);sRd('')}} className="bg-purple-600 text-white px-4 rounded">Add</button></div>{reminders.map(r=><div key={r.id} className="flex justify-between p-2 border-b"><span>{formatDate(r.date)}</span><div className="flex gap-2">{r.status!=='completed'&&<button onClick={()=>onUpRem(r.id,'completed')} className="text-green-500"><Check size={16}/></button>}<button onClick={()=>onDelRem(r.id)} className="text-red-500"><X size={16}/></button></div></div>)}</div>
-      
-      {/* Admin PIN Change */}
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><ShieldCheck size={18} className="text-red-600"/> Admin මුරපදය වෙනස් කිරීම</h3><div className="space-y-2"><input type="password" placeholder="පරණ එක" className="border p-2 w-full rounded" value={adminPass.old} onChange={e=>sAdminPass({...adminPass,old:e.target.value})}/><input type="password" placeholder="අලුත් එක" className="border p-2 w-full rounded" value={adminPass.new} onChange={e=>sAdminPass({...adminPass,new:e.target.value})}/><input type="password" placeholder="තහවුරු කරන්න" className="border p-2 w-full rounded" value={adminPass.con} onChange={e=>sAdminPass({...adminPass,con:e.target.value})}/><button onClick={changeAdmin} className="bg-red-600 text-white w-full py-2 rounded font-bold">Admin PIN වෙනස් කරන්න</button></div></div>
-
-      {/* Employee PIN Change (Secure) */}
       <div className="bg-white p-4 rounded shadow"><h3 className="font-bold mb-2 flex items-center gap-2"><KeyRound size={18} className="text-blue-600"/> සේවක මුරපදය (Worker PIN)</h3><div className="space-y-2"><input type="password" placeholder="ඔබේ Admin PIN අංකය (අවසර සඳහා)" className="border p-2 w-full rounded" value={appPass.old} onChange={e=>sAppPass({...appPass,old:e.target.value})}/><input type="password" placeholder="අලුත් සේවක PIN අංකය" className="border p-2 w-full rounded" value={appPass.new} onChange={e=>sAppPass({...appPass,new:e.target.value})}/><input type="password" placeholder="නැවතත් සේවක PIN අංකය" className="border p-2 w-full rounded" value={appPass.con} onChange={e=>sAppPass({...appPass,con:e.target.value})}/><button onClick={changeApp} className="bg-blue-600 text-white w-full py-2 rounded font-bold">සේවක PIN වෙනස් කරන්න</button></div></div>
     </div>
   );
